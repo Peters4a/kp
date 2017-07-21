@@ -1,0 +1,7 @@
+{
+    "N" : 10,
+    "V" : 100,
+    "CorrMode" : "weakly",
+    "R" : 20,
+    "CapMode" : "doublev"
+}
