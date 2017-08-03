@@ -7,8 +7,8 @@ type KnapsackProblemT struct {
     Capacity int   `json:"capacity"`		// capacity of the knapsack
     X        []int `json:"x,omitempty"`		// binary decision variables
     Obj      int   `json:"obj,omitempty"`	// objective function value
-    Xf       []float64 `json:"xf,omitempty"`
-    				// decision variables for solvers that may generate fractional
+    Xf       []float64 `json:"xf,omitempty"`	// float values for fractional upper bound methods
+				// decision variables for solvers that may generate fractional
                                 // values for the decision variables (e.g. LP relaxation)
 }
 

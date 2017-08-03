@@ -17,7 +17,7 @@ func CheckSortedItems(kp *KnapsackProblemT) error {
         if float64(kp.Profit[i])/float64(kp.Weight[i]) >
            float64(kp.Profit[i-1])/float64(kp.Weight[i-1]) {
             return errors.New("wrong input: items are not sorted according to decreasing profit/weight")
-        }   
-    }   
+        }
+    }
     return nil
 }
