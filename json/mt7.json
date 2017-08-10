@@ -1,0 +1,9 @@
+{
+    "name"      : "mt7",
+    "comment"   : "Example 2.2 of the book Knapsack Problem by Martello and Toth",
+    "type"      : "KP",
+    "dimension" : 7,
+    "profits"   : [70,20,39,37,7,5,10],
+    "weights"   : [31,10,20,19,4,3,6],
+    "capacity"  : 50
+}

@@ -14,23 +14,23 @@ type stateT struct {
 // Solve a knapsack problem by Branch and Bound.
 // Here we use a best upper bound strategy which leads to an A*-algorithm.
 // This is simply achieved by using a priority queue as agenda.
-func BranchAndBound(kp *KnapsackProblemT) {
+func BranchAndBound(kp KnapsackProblem) ([]int,int) {
     var (
         state1 *stateT
         state2 *stateT
     )
 
-    n := len(kp.Profit)				// number of items
+    n := kp.N()					// number of items
     agenda := []*stateT{ initialState(kp) }	// initial state of our agenda
 
     for {
         state := agenda[0]		// get the first element of the agenda (priority queue)
 	if state.nitems == n {		// goal state: optimal solution found
-	    storeOptSol(kp, state)	// store it in kp
-	    return			// and we are done.
+	    return optSol(kp, state)	// store it in kp
+					// and we are done.
 	}
 						// no goal state: nitems < n
-	if state.capacity >= kp.Weight[state.nitems] {	// is X[item]=1 feasible? if yes:
+	if state.capacity >= kp.Weight(state.nitems) {	// is X[item]=1 feasible? if yes:
 	    state1 = successor1(kp,state)	// successor for X[item] = 1
 	} else {
 	    state1 = nil
@@ -46,19 +46,18 @@ func BranchAndBound(kp *KnapsackProblemT) {
 // We simply achieve the depth first strategy by using a stack as agenda.
 // The garbage collector should keep the used memory small, because the agenda
 // contains only one path (with sibling nodes, the size of the agenda is bounded by 2n+1).
-func BranchAndBoundHS(kp *KnapsackProblemT) {
+func BranchAndBoundHS(kp KnapsackProblem) ([]int,int) {
     var (
 	stateB *stateT				// actual best solution
     )
 
-    n := len(kp.Profit)				// number of items
+    n := kp.N()					// number of items
     pmax := 0					// actual best solution value
     agenda := []*stateT{ initialState(kp) }	// initial state of our agenda
 
     for {
         if len(agenda) == 0 {			// if the agenda is empty we are done.
-	    storeOptSol(kp, stateB)		// we store the best solution we found
-	    return
+	    return optSol(kp, stateB)		// we store the best solution we found
 	}
 	state := agenda[len(agenda)-1]		// take the top of the stack
 	agenda = agenda[0:len(agenda)-1]	// pop
@@ -69,34 +68,34 @@ func BranchAndBoundHS(kp *KnapsackProblemT) {
 	    }
 	} else if state.phi > pmax {		// not a goal state but upper bound larger
 	    agenda = append(agenda,successor0(kp,state))	// push for decision = 0
-	    if state.capacity >= kp.Weight[state.nitems] {// if residual capacity is large enough
+	    if state.capacity >= kp.Weight(state.nitems) {// if residual capacity is large enough
 		agenda = append(agenda,successor1(kp,state))	// push for decision = 1
 	    }
 	}
     }
 }
 
-func initialState(kp *KnapsackProblemT) *stateT {
-    state := &stateT{		// initial state
-	decision : -1,		// no decision
-        nitems   : 0,		// no item considered yet
-	psum     : 0,		// no profit yet
-	capacity : kp.Capacity,	// knapsack is empty
-	ubound   : uBound1P(kp.Profit, kp.Weight, kp.Capacity, 0),
-	father   : nil,		// root of the search tree has no father
+func initialState(kp KnapsackProblem) *stateT {
+    state := &stateT{			// initial state
+	decision : -1,			// no decision
+        nitems   : 0,			// no item considered yet
+	psum     : 0,			// no profit yet
+	capacity : kp.Capacity(),	// knapsack is empty
+	ubound   : uBound1P(kp, kp.Capacity(), 0),
+	father   : nil,			// root of the search tree has no father
     }
     state.phi = state.psum + state.ubound
 
     return state
 }
 
-func successor0(kp *KnapsackProblemT, state *stateT) *stateT {
+func successor0(kp KnapsackProblem, state *stateT) *stateT {
     state2 := &stateT{			// X[item]=0 is always feasible
 	decision : 0,
 	nitems   : state.nitems + 1,
 	psum     : state.psum,		// psum and capacity remain unchanged
 	capacity : state.capacity,	// but the upper bound may change
-	ubound   : uBound1P(kp.Profit, kp.Weight, state.capacity, state.nitems+1),
+	ubound   : uBound1P(kp, state.capacity, state.nitems+1),
 	father   : state,
     }
     state2.phi = state2.psum + state2.ubound
@@ -104,14 +103,14 @@ func successor0(kp *KnapsackProblemT, state *stateT) *stateT {
     return state2
 }
 
-func successor1(kp *KnapsackProblemT, state *stateT) *stateT {
+func successor1(kp KnapsackProblem, state *stateT) *stateT {
     item := state.nitems
     state1 := &stateT{			// construct a state with X[item] = 1
-	decision : 1,	
+	decision : 1,
 	nitems   : state.nitems + 1,
-	psum     : state.psum + kp.Profit[item],	// additional profit
-	capacity : state.capacity - kp.Weight[item],	// less residual capacity
-	ubound   : state.ubound - kp.Profit[item],	// trick: on X[item]=1
+	psum     : state.psum + kp.Profit(item),	// additional profit
+	capacity : state.capacity - kp.Weight(item),	// less residual capacity
+	ubound   : state.ubound - kp.Profit(item),	// trick: on X[item]=1
 	father   : state,				// psum+ubound doesn't change
     }
     state1.phi = state1.psum + state1.ubound
@@ -119,13 +118,14 @@ func successor1(kp *KnapsackProblemT, state *stateT) *stateT {
     return state1
 }
 
-func storeOptSol(kp *KnapsackProblemT,state *stateT) {
-    n := len(kp.Profit)
-    kp.X = make([]int, n)
-    kp.Obj = state.psum		// copy the decisions into decision vector X
+func optSol(kp KnapsackProblem, state *stateT) ([]int,int) {
+    n := kp.N()
+    x := make([]int, n)
+    z := state.psum		// copy the decisions into decision vector x
     for ; state.nitems>0 ; state=state.father {
-	kp.X[state.nitems-1] = state.decision
+	x[state.nitems-1] = state.decision
     }
+    return x,z
 }
 
 // Update the agenda, which is organized as a max-heap.

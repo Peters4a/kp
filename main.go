@@ -2,14 +2,24 @@ package main
 
 import (
     "os"
+    "time"
 
-    "git.solver4all.com/Peter/kp"
+    "git.solver4all.com/Peter/kp/kp"
     "git.solver4all.com/Peter/s4a"
     "github.com/urfave/cli"
 )
 
 func main() {
     app := cli.NewApp()
+    app.Version = "0.8.15"
+    app.Compiled = time.Now()
+    app.Authors = []cli.Author{
+        cli.Author{
+	    Name: "Peter Becker",
+	    Email: "peter@solver4all.com",
+	},
+    }
+    app.Copyright = "(c) 2017 Peter Becker"
     app.Usage = "Knapsack problem solver and generator."
     app.Flags = []cli.Flag{
         cli.StringFlag{
@@ -27,27 +37,37 @@ func main() {
 	{
 	    Name: "bab",
 	    Usage: "Solve knapsack problem by branch and bound (A*)",
-	    Action: babSolver,
+	    Action: func(c *cli.Context) error {
+	        return solve(c, func(p kp.KnapsackProblem) ([]int,int) { return kp.BranchAndBound(p) })
+	    },
         },
 	{
 	    Name: "hs",
 	    Usage: "Solve knapsack problem by branch and bound algorithm of Horowitz and Sahni",
-	    Action: hsSolver,
+	    Action: func(c *cli.Context) error {
+	        return solve(c, func(p kp.KnapsackProblem) ([]int,int) { return kp.BranchAndBoundHS(p) })
+	    },
         },
 	{
 	    Name: "dp",
 	    Usage: "Solve knapsack problem by dynamic programming",
-	    Action: dpSolver,
+	    Action: func(c *cli.Context) error {
+	        return solve(c, func(p kp.KnapsackProblem) ([]int,int) { return kp.DynProg(p) })
+	    },
 	},
 	{
 	    Name: "greedy",
 	    Usage: "Solve knapsack problem by greedy heuristic",
-	    Action: greedySolver,
+	    Action: func(c *cli.Context) error {
+	        return solve(c, func(p kp.KnapsackProblem) ([]int,int) { return kp.Greedy(p) })
+	    },
 	},
 	{
 	    Name: "ub",
 	    Usage: "Compute an upper bound for the objective function value of a knapsack problem",
-	    Action: upperBound,
+	    Action: func(c *cli.Context) error {
+	        return bound(c, func(p kp.KnapsackProblem) ([]float64,int) { return kp.UpperBound(p) })
+	    },
 	},
 	{
 	    Name: "gen",
@@ -59,150 +79,68 @@ func main() {
     app.Run(os.Args)
 }
 
-func babSolver(c *cli.Context) error {
+func solve(c *cli.Context, solvfunc func(p kp.KnapsackProblem) ([]int,int)) error {
     var (
-        kpp kp.KnapsackProblemT
+        kpp kp.KnapsackData
 	err error
     )
 
-    // read
-    err = readData(&kpp, c)
+    err = readData(&kpp, c)		// read
     if err != nil {
         return err
     }
 
-    //check
-    err = kp.CheckEqualLength(&kpp)
+    /*
+    err = kp.CheckEqualLength(&kpp)	//check
     if err != nil {
         return err
     }
+    */
     err = kp.CheckSortedItems(&kpp)
     if err != nil {
         return err
     }
 
-    // solve
-    kp.BranchAndBound(&kpp)
+    x,z := solvfunc(kpp)		// solve
+    kpp.X = x
+    kpp.Z = z
 
-    // write
-    return writeKnapsackProblem(&kpp, c)
+    return writeKnapsackProblem(&kpp, c)	// write
+
 }
 
-func hsSolver(c *cli.Context) error {
+func bound(c *cli.Context, ubfunc func(p kp.KnapsackProblem) ([]float64,int)) error {
     var (
-        kpp kp.KnapsackProblemT
+        kpp kp.KnapsackData
 	err error
     )
 
-    // read
-    err = readData(&kpp, c)
+    err = readData(&kpp, c)		// read
     if err != nil {
         return err
     }
 
-    //check
-    err = kp.CheckEqualLength(&kpp)
+    /*
+    err = kp.CheckEqualLength(&kpp)	//check
     if err != nil {
         return err
     }
+    */
     err = kp.CheckSortedItems(&kpp)
     if err != nil {
         return err
     }
 
-    // solve
-    kp.BranchAndBound(&kpp)
+    x,z := ubfunc(kpp)			// solve
+    kpp.Xf = x
+    kpp.Z = z
 
-    // write
-    return writeKnapsackProblem(&kpp, c)
-}
-
-func dpSolver(c * cli.Context) error {
-    var (
-        kpp kp.KnapsackProblemT
-	err error
-    )
-
-    // read
-    err = readData(&kpp, c)
-    if err != nil {
-        return err
-    }
-
-    // check
-    err = kp.CheckEqualLength(&kpp)
-    if err != nil {
-        return err
-    }
-
-    // solve
-    kp.DynProg(&kpp)
-
-    // write
-    return writeKnapsackProblem(&kpp, c)
-}
-
-func greedySolver(c *cli.Context) error {
-    var (
-        kpp kp.KnapsackProblemT
-	err error
-    )
-
-    // read
-    err = readData(&kpp, c)
-    if err != nil {
-        return err
-    }
-
-    //check
-    err = kp.CheckEqualLength(&kpp)
-    if err != nil {
-        return err
-    }
-    err = kp.CheckSortedItems(&kpp)
-    if err != nil {
-        return err
-    }
-
-    // solve
-    kp.Greedy(&kpp)
-
-    // write
-    return writeKnapsackProblem(&kpp, c)
-}
-
-func upperBound(c *cli.Context) error {
-    var (
-        kpp kp.KnapsackProblemT
-	err error
-    )
-
-    // read
-    err = readData(&kpp, c)
-    if err != nil {
-        return err
-    }
-
-    //check
-    err = kp.CheckEqualLength(&kpp)
-    if err != nil {
-        return err
-    }
-    err = kp.CheckSortedItems(&kpp)
-    if err != nil {
-        return err
-    }
-
-    // solve
-    kp.UpperBound(&kpp)
-
-    // write
-    return writeKnapsackProblem(&kpp, c)
+    return writeKnapsackProblem(&kpp, c)	// write
 }
 
 func generate(c *cli.Context) error {
     var (
-        kpgen kp.KnapsackGeneratorT
+        kpgen kp.KnapsackGenData
 	err   error
     )
 
@@ -219,7 +157,7 @@ func generate(c *cli.Context) error {
     }
 
     // write
-    return writeKnapsackProblem(kpp, c)
+    return writeKnapsackProblem(&kpp, c)
 }
 
 func readData(object interface{}, c *cli.Context) error {
@@ -246,7 +184,7 @@ func readData(object interface{}, c *cli.Context) error {
     return nil
 }
 
-func writeKnapsackProblem(kpp *kp.KnapsackProblemT, c *cli.Context) error {
+func writeKnapsackProblem(kpp *kp.KnapsackData, c *cli.Context) error {
     var (
 	w   *os.File
         err error

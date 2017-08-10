@@ -1,7 +1,6 @@
 package kp
 
 import (
-    "errors"
     "fmt"
     "math/rand"
     "sort"
@@ -9,27 +8,26 @@ import (
 )
 
 
-func Generate(gen KnapsackGeneratorT) (*KnapsackProblemT,error) {
+func Generate(gen KnapsackGenData) (KnapsackData,error) {
     var (
-	p []int		// profits
-	w []int		// weights
-        c int		// capacity
+        c      int		// capacity
+	kpdata KnapsackData	// generated problem
     )
 
-    p = make([]int, gen.N)
-    w = make([]int, gen.N)
-    
+    p := make([]int, gen.N)
+    w := make([]int, gen.N)
+
     if gen.Seed != 0 {
         rand.Seed(gen.Seed)
     } else {
 	rand.Seed(int64(time.Now().Nanosecond()))
     }
 
-    for i:=0 ; i<gen.N ; i++ {		// weight are always uniformly distributed in
+    for i:=0 ; i<gen.N ; i++ {		// weights are always uniformly distributed in
         w[i] = 1 + rand.Intn(gen.V)	// the interval[1,V]
     }
 
-    if gen.CorrMode == "uncorrelated" {	// profit are also uniformly distributed in [1,V]
+    if gen.CorrMode == "uncorrelated" {	// profits are also uniformly distributed in [1,V]
 	for i:=0 ; i<gen.N ; i++ {
 	    p[i] = 1 + rand.Intn(gen.V)
 	}
@@ -45,9 +43,9 @@ func Generate(gen KnapsackGeneratorT) (*KnapsackProblemT,error) {
 	    p[i] = w[i] + gen.R
 	}
     } else {
-        return nil, errors.New(fmt.Sprintf("unknown correlation mode: %s", gen.CorrMode))
+        return kpdata, fmt.Errorf("unknown correlation mode: %s", gen.CorrMode)
     }
-    
+
 
     if gen.CapMode == "halfwsum" {	// C = 0.5*\sum w[i]
         wsum := 0
@@ -55,23 +53,19 @@ func Generate(gen KnapsackGeneratorT) (*KnapsackProblemT,error) {
 	    wsum += w[i]
 	}
 	c = wsum/2
-    } else if gen.CapMode == "doublev" { 	// C = 2*V
+    } else if gen.CapMode == "doublev" {	// C = 2*V
         c = 2*gen.V
     } else {
-        return nil, errors.New(fmt.Sprintf("unknown capacity mode: %s", gen.CapMode))
+        return kpdata, fmt.Errorf("unknown capacity mode: %s", gen.CapMode)
     }
 
     perm := sortPerm(p, w)		// we sort the values according to decreasing p[i]/w[i]
     p = permute(p, perm)		// sortPerm() computes the permutation for sorting and
     w = permute(w, perm)		// we apply this permutation to p and w.
 
-    kpp := &KnapsackProblemT{
-        Profit   : p,
-	Weight   : w,
-	Capacity : c,
-    }
+    kpdata = KnapsackData{ P : p, W : w, C : c }
 
-    return kpp, nil
+    return kpdata, nil
 }
 
 // Everything we need for sorting the items
