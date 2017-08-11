@@ -32,6 +32,10 @@ func main() {
 	    Value: "",
 	    Usage: "write result to file instead of standard output",
 	},
+	cli.BoolFlag{
+	    Name: "indent",
+	    Usage: "produce neatly indented JSON output",
+	},
     }
     app.Commands = []cli.Command{
 	{
@@ -200,7 +204,12 @@ func writeKnapsackProblem(kpp *kp.KnapsackData, c *cli.Context) error {
         w = os.Stdout
     }
 
-    err = s4a.WriteFJsonOutput(w, &kpp)
+    indent := c.GlobalBool("indent")
+    if indent {
+	err = s4a.WriteFJsonOutputIndent(w, &kpp, "", "    ")
+    } else {
+	err = s4a.WriteFJsonOutput(w, &kpp)
+    }
     if err != nil {
         return  err
     }

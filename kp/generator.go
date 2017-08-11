@@ -17,11 +17,10 @@ func Generate(gen KnapsackGenData) (KnapsackData,error) {
     p := make([]int, gen.N)
     w := make([]int, gen.N)
 
-    if gen.Seed != 0 {
-        rand.Seed(gen.Seed)
-    } else {
-	rand.Seed(int64(time.Now().Nanosecond()))
+    if gen.Seed == 0 {
+	gen.Seed = int64(time.Now().Nanosecond())
     }
+    rand.Seed(gen.Seed)
 
     for i:=0 ; i<gen.N ; i++ {		// weights are always uniformly distributed in
         w[i] = 1 + rand.Intn(gen.V)	// the interval[1,V]
@@ -63,7 +62,10 @@ func Generate(gen KnapsackGenData) (KnapsackData,error) {
     p = permute(p, perm)		// sortPerm() computes the permutation for sorting and
     w = permute(w, perm)		// we apply this permutation to p and w.
 
-    kpdata = KnapsackData{ P : p, W : w, C : c }
+    kpdata = KnapsackData{ Dim: gen.N,  P : p, W : w, C : c }
+    kpdata.Name = fmt.Sprintf("rd%v",gen.N)
+    kpdata.Comment = fmt.Sprintf("randomly generated problem, parameters: V=%v, CorrMode=%v, R=%v, CapMode=%v, Seed=%v", gen.V, gen.CorrMode, gen.R, gen.CapMode, gen.Seed)
+    kpdata.Type = "KP"
 
     return kpdata, nil
 }
